@@ -73,7 +73,9 @@ find(
                     printf "Current:\t%s\n",       $current_retention;
                     printf "Proposed:\t%s\n",      $match->{retentions};
                     if ($reallyrun) {
-                        system( $WHISPER_RESIZE,   $full_path, $match->{retentions} );
+                        system( "$WHISPER_RESIZE $full_path $match->{retentions}" );
+                        `chown carbon:carbon $full_path`;
+                        `chown carbon:carbon $full_path.bak`;
                         print "\n";
                     }
                     else {
@@ -103,9 +105,9 @@ sub graphitify {
 sub get_retention {
     my $path   = shift;
     my $output = `$WHISPER_INFO $path`;
-    $output =~ /retention: (\d+)\nsecondsPerPoint: (\d+)/;
+    $output =~ /secondsPerPoint: (\d+)\npoints: (\d+)/;
 
-    return "$2:$1";
+    return "$1:$2";
 }
 
 sub usage {
@@ -205,7 +207,7 @@ This script was written by Jeremy Jack<jjack@mediatemple.net>
 
 =head1 LICENSE
 
-This module is free software and is published under the same
+This program is free software and is published under the same
 terms as Perl itself.
 
 =cut
