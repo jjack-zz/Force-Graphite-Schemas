@@ -1,0 +1,33 @@
+NAME
+	Force Schemas
+
+SYNOPSIS
+	A simple tool to enforce current retention policies and schemas 
+	for your Graphite installation.
+
+	High Level Overview:
+	- Grab all schema info as set in $GRAPHITE_BASE/$STORGE_SCHEMAS
+	- Run through all Whisper databases as defined in $GRAPHITE_BASE/$STORAGE_PATH
+	- Run /usr/bin/whisper-info.py against them
+	- Match the database's name with the storage schema
+	- If the schema is up to date, nothing happens, otheriwse it runs /usr/bin/whisper-resize.py against it
+
+	NOTE: /usr/bin/whisper-resize.py creates a .bak file. After you've verified that your data has copied
+        over correctly, be sure to delete all of them!
+
+USAGE
+force_schemas.pl [options]
+
+	-h, --help : display this help message
+	-r, --reallyrun : actually process and modify whisper databases
+	-p, --path : the path where to create your application
+	-n, --noop : default; runs in noop mode, showing you the commands that would be run
+
+AUTHOR
+This script was written by Jeremy Jack<jjack@mediatemple.net>
+
+COPYRIGHT AND LICENSE
+
+This program is free software and is published under the same
+terms as Perl itself.
+
