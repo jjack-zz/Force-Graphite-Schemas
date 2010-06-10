@@ -19,13 +19,14 @@ my $WHISPER_RESIZE  = "/usr/bin/whisper-resize.py";
 die "$GRAPHITE_BASE/$STORAGE_SCHEMAS not found!\n"
     unless ( -e "$GRAPHITE_BASE/$STORAGE_SCHEMAS" );
 
-my ( $reallyrun, $help ) = ( 0, 0 );
+my ( $reallyrun, $help, $noop ) = ( 0, 0, 0 );
 GetOptions(
     "r|reallyrun" => \$reallyrun,
     "h|help"      => \$help,
+    "n|noop"      => \$noop,
 );
 
-usage() and exit(0) if $help;
+usage() and exit(0) if ($help || !($reallyrun || $noop));
 
 # take the current schemas flle and ...
 open my $SCHEMAS_FILE, "$GRAPHITE_BASE/$STORAGE_SCHEMAS"
@@ -117,7 +118,7 @@ Usage:
    options are as follows :
    -h, --help             : display this help message
    -r, --reallyrun        : actually process and modify whisper databases
-   [no options]           : default- runs in noop mode, showing you the commands that would be run
+   -n, --noop             : default- runs in noop mode, showing you the commands that would be run
 
 USAGE
     exit 0;
