@@ -63,7 +63,7 @@ find(
                 # does not currently support retentions values like "60:43200,900:350400"
                 # only works with "60:43200"
                 # TODO: add this
-                next unless ( $match->{retentions} =~ /^\d+:\d+$/ );
+                #next unless ( $match->{retentions} =~ /^\d+:\d+$/ );
 
                 my $current_retention = get_retention($full_path);
 
@@ -72,15 +72,19 @@ find(
                     printf "Matched:\t\%s (%s)\n", $match->{name}, $match->{pattern};
                     printf "Current:\t%s\n",       $current_retention;
                     printf "Proposed:\t%s\n",      $match->{retentions};
+
+                    # strip any commas out
+                    my $new_retention = $match->{retentions};
+                    $new_retention =~ s/,/ /;
                     if ($reallyrun) {
-                        system( "$WHISPER_RESIZE $full_path $match->{retentions}" );
+                        system( "$WHISPER_RESIZE $full_path $new_retention" );
                         `chown carbon:carbon $full_path`;
                         `chown carbon:carbon $full_path.bak`;
                         print "\n";
                     }
                     else {
                         printf "Would Run:\t%s %s %s\n\n", $WHISPER_RESIZE,
-                            $full_path, $match->{retentions};
+                            $full_path, $new_retention;
                     }
                 }
             }
@@ -105,9 +109,13 @@ sub graphitify {
 sub get_retention {
     my $path   = shift;
     my $output = `$WHISPER_INFO $path`;
-    $output =~ /secondsPerPoint: (\d+)\npoints: (\d+)/;
 
-    return "$1:$2";
+    my @retentions;
+    while ( $output =~ m/Archive \d+\nretention: \d+\nsecondsPerPoint: (\d+)\npoints: (\d+)\nsize: \d+\noffset: \d+\n/g ) {
+        push @retentions, "$1:$2";
+    }
+
+    return join(',', @retentions);
 }
 
 sub usage {
@@ -155,7 +163,6 @@ force_schemas.pl [options]
 
 =item -h, --help : display this help message
 =item -r, --reallyrun : actually process and modify whisper databases
-=item -p, --path : the path where to create your application
 =item -n, --noop : default; runs in noop mode, showing you the commands that would be run
 
 =back
@@ -166,8 +173,8 @@ Here is an example of it being --reallyrun
 $ force_schemas.pl --reallyrun
 Name:		server.name.type.datapoint_a
 Matched:	everything_1min_3_years (.*)
-Current:	60:12345
-Proposed:	60:1577846
+Current:	60:1577846
+Proposed:	60:129600,3600:26280
 Retrieving all data from the archives
 Creating new whisper database: /opt/graphite/storage/whisper/server/name/type/datapoint_a.wsp.tmp
 Created: /opt/graphite/storage/whisper/server/name/type/datapoint_a.wsp.tmp (18934180 bytes)
@@ -191,9 +198,9 @@ And an example of it being run with no options or --noop
 $ force_schemas.pl --noop
 Name:		server.name.type.datapoint_a
 Matched:	everything_1min_3_years (.*)
-Current:	60:12345
-Proposed:	60:1577846
-Would Run:	/usr/bin/whisper-resize.py /opt/graphite/storage/whisper/server/name/type/datapoint_a.wsp 60:1577846
+Current:	60:1577846
+Proposed:	60:129600,3600:26280
+Would Run:	/usr/bin/whisper-resize.py /opt/graphite/storage/whisper/server/name/type/datapoint_a.wsp 60:129600 3600:26280
 
 Name:		server.name.type.datapoint_b
 Matched:	everything_1min_3_years (.*)
@@ -203,11 +210,12 @@ Would Run:	/usr/bin/whisper-resize.py /opt/graphite/storage/whisper/server/name/
 
 =head1 AUTHOR
 
-This script was written by Jeremy Jack<jjack@mediatemple.net>
+Jeremy Jack <jjack@mediatemple.net>
+This work was sponsored by my employer, (mt) Media Temple, Inc.
 
 =head1 LICENSE
 
-This program is free software and is published under the same
-terms as Perl itself.
+This program is free software distributed under the Artistic License 2.0.
+The full text of the license can be found in the LICENSE file included with this software.
 
 =cut

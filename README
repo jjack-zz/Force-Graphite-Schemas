@@ -16,18 +16,16 @@ SYNOPSIS
         over correctly, be sure to delete all of them!
 
 USAGE
-force_schemas.pl [options]
+	force_schemas.pl [options]
 
-	-h, --help : display this help message
+	-h, --help : default; display this help message
 	-r, --reallyrun : actually process and modify whisper databases
 	-p, --path : the path where to create your application
-	-n, --noop : default; runs in noop mode, showing you the commands that would be run
+	-n, --noop : runs in noop mode, showing you the commands that would be run
 
 AUTHOR
-This script was written by Jeremy Jack<jjack@mediatemple.net>
+	This script was written by Jeremy Jack<jjack@mediatemple.net>
 
 COPYRIGHT AND LICENSE
-
-This program is free software and is published under the same
-terms as Perl itself.
-
+	This program is free software and under the Artistic License 2.0.
+	The full text of the license can be found in the LICENSE file included with this software.
