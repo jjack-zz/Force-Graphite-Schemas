@@ -1,4 +1,9 @@
 Revision history for force_schemas.pl
 
+0.02    2010-08-26
+	- support for compound retentions
+	- artistic license 2.0
+	- minor documentation corrections
+
 0.01	2010-06-09
 	Initial check in
