@@ -60,11 +60,6 @@ find(
 
                 next unless ( $match->{name} );
 
-                # does not currently support retentions values like "60:43200,900:350400"
-                # only works with "60:43200"
-                # TODO: add this
-                #next unless ( $match->{retentions} =~ /^\d+:\d+$/ );
-
                 my $current_retention = get_retention($full_path);
 
                 if ( $current_retention ne $match->{retentions} ) {
