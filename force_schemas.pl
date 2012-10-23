@@ -3,35 +3,33 @@
 use strict;
 use warnings;
 
-my $VERSION = '0.02';
+our $VERSION = '0.03';
 
-use Data::Dumper;
 use File::Find qw(find);
 use Getopt::Long;
 use YAML;
 
-my $GRAPHITE_BASE   = "/opt/graphite";
-my $STORAGE_SCHEMAS = "conf/storage-schemas.conf";
-my $STORAGE_PATH    = "storage/whisper/";
-my $WHISPER_INFO    = "/usr/bin/whisper-info.py";
-my $WHISPER_RESIZE  = "/usr/bin/whisper-resize.py";
+my $STORAGE_SCHEMAS = '/etc/carbon/storage-schemas.conf';
+my $STORAGE_PATH    = '/var/lib/carbon/whisper/';
+my $WHISPER_INFO    = '/usr/bin/whisper-info.py';
+my $WHISPER_RESIZE  = '/usr/bin/whisper-resize.py';
 
-die "$GRAPHITE_BASE/$STORAGE_SCHEMAS not found!\n"
-    unless ( -e "$GRAPHITE_BASE/$STORAGE_SCHEMAS" );
+die "$STORAGE_SCHEMAS not found!\n"
+    unless ( -e "$STORAGE_SCHEMAS" );
 
 my ( $reallyrun, $help, $noop ) = ( 0, 0, 0 );
 GetOptions(
-    "r|reallyrun" => \$reallyrun,
-    "h|help"      => \$help,
-    "n|noop"      => \$noop,
+    'r|reallyrun' => \$reallyrun,
+    'h|help'      => \$help,
+    'n|noop'      => \$noop,
 );
 
 usage() and exit(0) if ($help || !($reallyrun || $noop));
 
 # take the current schemas flle and ...
-open my $SCHEMAS_FILE, "$GRAPHITE_BASE/$STORAGE_SCHEMAS"
+open my $SCHEMAS_FILE, '<', $STORAGE_SCHEMAS
     or die "Unable to open: $!\n";
-my $schemas_string = join "", <$SCHEMAS_FILE>;
+my $schemas_string = join q{}, <$SCHEMAS_FILE>;
 close $SCHEMAS_FILE;
 
 # ... convert it to yaml because writing a parser was overkill
@@ -41,22 +39,22 @@ foreach (qw( priority pattern retentions )) {
     $schemas_string =~ s/$_: (.+)/$_: "$1"/gm;
 }
 
-# an array here because the actual order is very important to us
+# use an array here because the actual order is very important to us
 my @retentions = YAML::Load($schemas_string);
 
 # recursively go over the whisper files
 # and update them according to the schemas
-my $dir = "$GRAPHITE_BASE/$STORAGE_PATH";
+my $dir = $STORAGE_PATH;
 find(
     sub {
         if (/\.wsp$/) {
             my $full_path     = $File::Find::name;
             my $graphite_name = graphitify($full_path);
 
-            foreach my $retentionos (@retentions) {
+            foreach my $retention (@retentions) {
 
                 # we only want the first matched type
-                my ($match) = grep { $graphite_name =~ /$_->{pattern}/ } @$retentionos;
+                my ($match) = grep { $graphite_name =~ /$_->{pattern}/ } @{$retention};
 
                 next unless ( $match->{name} );
 
@@ -70,7 +68,7 @@ find(
 
                     # strip any commas out
                     my $new_retention = $match->{retentions};
-                    $new_retention =~ s/,/ /;
+                    $new_retention =~ s/,/ /g;
                     if ($reallyrun) {
                         system( "$WHISPER_RESIZE $full_path $new_retention" );
                         `chown carbon:carbon $full_path`;
@@ -94,7 +92,7 @@ sub graphitify {
     # to:   server.name.type.datapoint
 
     my $path = shift;
-    $path =~ /^$GRAPHITE_BASE\/$STORAGE_PATH(.+)\.wsp$/;
+    $path =~ /^$STORAGE_PATH(.+)\.wsp$/;
     $path = $1;
     $path =~ s/\//\./g;
 
@@ -166,10 +164,10 @@ force_schemas.pl [options]
 
 Here is an example of it being --reallyrun
 $ force_schemas.pl --reallyrun
-Name:		server.name.type.datapoint_a
-Matched:	everything_1min_3_years (.*)
-Current:	60:1577846
-Proposed:	60:129600,3600:26280
+Name:       server.name.type.datapoint_a
+Matched:    everything_1min_3_years (.*)
+Current:    60:1577846
+Proposed:   60:129600,3600:26280
 Retrieving all data from the archives
 Creating new whisper database: /opt/graphite/storage/whisper/server/name/type/datapoint_a.wsp.tmp
 Created: /opt/graphite/storage/whisper/server/name/type/datapoint_a.wsp.tmp (18934180 bytes)
@@ -177,10 +175,10 @@ Migrating data...
 Renaming old database to: /opt/graphite/storage/whisper/server/name/type/datapoint_a.wsp.bak
 Renaming new database to: /opt/graphite/storage/whisper/server/name/type/datapoint_a.wsp
 
-Name:		server.name.type.datapoint_b
-Matched:	everything_1min_3_years (.*)
-Current:	60:12345
-Proposed:	60:1577846
+Name:       server.name.type.datapoint_b
+Matched:    everything_1min_3_years (.*)
+Current:    60:12345
+Proposed:   60:1577846
 Retrieving all data from the archives
 Creating new whisper database: /opt/graphite/storage/whisper/server/name/type/datapoint_b.wsp.tmp
 Created: /opt/graphite/storage/whisper/server/name/type/datapoint_b.wsp.tmp (18934180 bytes)
@@ -191,17 +189,17 @@ Renaming new database to: /opt/graphite/storage/whisper/server/name/type/datapoi
 
 And an example of it being run with no options or --noop
 $ force_schemas.pl --noop
-Name:		server.name.type.datapoint_a
-Matched:	everything_1min_3_years (.*)
-Current:	60:1577846
-Proposed:	60:129600,3600:26280
-Would Run:	/usr/bin/whisper-resize.py /opt/graphite/storage/whisper/server/name/type/datapoint_a.wsp 60:129600 3600:26280
+Name:       server.name.type.datapoint_a
+Matched:    everything_1min_3_years (.*)
+Current:    60:1577846
+Proposed:   60:129600,3600:26280
+Would Run:  /usr/bin/whisper-resize.py /opt/graphite/storage/whisper/server/name/type/datapoint_a.wsp 60:129600 3600:26280
 
-Name:		server.name.type.datapoint_b
-Matched:	everything_1min_3_years (.*)
-Current:	60:12345
-Proposed:	60:1577846
-Would Run:	/usr/bin/whisper-resize.py /opt/graphite/storage/whisper/server/name/type/datapoint_b.wsp 60:1577846
+Name:       server.name.type.datapoint_b
+Matched:    everything_1min_3_years (.*)
+Current:    60:12345
+Proposed:   60:1577846
+Would Run:  /usr/bin/whisper-resize.py /opt/graphite/storage/whisper/server/name/type/datapoint_b.wsp 60:1577846
 
 =head1 AUTHOR
 
